@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -27,7 +28,60 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PokedexAdapter extends RecyclerView.Adapter<PokedexAdapter.PokedexViewHolder> {
+public class PokedexAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+    private final int VIEW_TYPE_ITEM = 0;
+    private final int VIEW_TYPE_LOADING = 1;
+    public List<Pokemon> pokemonList;
+
+    PokedexAdapter(List<Pokemon> pokemonList) {
+        this.pokemonList = pokemonList;
+    }
+
+    @NonNull
+    @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == VIEW_TYPE_ITEM) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.pokedex_row, parent, false);
+            return new PokedexViewHolder(view);
+        } else {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.pokedex_loading, parent, false);
+            return new LoadingViewHolder(view);
+        }
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder viewHolder, int position) {
+        if (viewHolder instanceof PokedexViewHolder) {
+            populatePokemonRow((PokedexViewHolder) viewHolder, position);
+        } else if (viewHolder instanceof LoadingViewHolder) {
+            showLoadingView((LoadingViewHolder) viewHolder, position);
+        }
+
+    }
+
+    @Override
+    public int getItemCount() {
+        return pokemonList == null ? 0 : pokemonList.size();
+    }
+
+    /* Method decides the type of ViewHolder to display in the RecyclerView */
+    @Override
+    public int getItemViewType(int position) {
+        return pokemonList.get(position) == null ? VIEW_TYPE_LOADING : VIEW_TYPE_ITEM;
+    }
+
+    private void showLoadingView(LoadingViewHolder viewHolder, int position) {
+        // Displaying progress bar
+    }
+
+    private void populatePokemonRow(PokedexViewHolder viewHolder, int position) {
+        Pokemon current = pokemonList.get(position);
+        viewHolder.textView.setText(current.getName());
+        // View Holder will have access to its current Pokemon
+        viewHolder.containerView.setTag(current);
+    }
+
+    /* == View holders == */
     public static class PokedexViewHolder extends RecyclerView.ViewHolder {
         public CardView containerView;
         public TextView textView;
@@ -53,66 +107,13 @@ public class PokedexAdapter extends RecyclerView.Adapter<PokedexAdapter.PokedexV
         }
     }
 
-    private List<Pokemon> pokemon = new ArrayList<>();
-    private RequestQueue requestQueue;
+    public static class LoadingViewHolder extends RecyclerView.ViewHolder {
+        ProgressBar progressBar;
 
-    PokedexAdapter(Context context) {
-        requestQueue = Volley.newRequestQueue(context);
-        loadPokemon();
+        public LoadingViewHolder(@NonNull View itemView) {
+            super(itemView);
+            progressBar = itemView.findViewById(R.id.progress_bar);
+        }
     }
-
-    public void loadPokemon() {
-        String url = "https://pokeapi.co/api/v2/pokemon?limit=10";
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    JSONArray results = response.getJSONArray("results");
-                    for (int i = 0; i < results.length(); i++) {
-                        JSONObject result = results.getJSONObject(i);
-
-                        String name = result.getString("name");
-                        pokemon.add(new Pokemon(
-                                    name.substring(0,1).toUpperCase() + name.substring(1),
-                                    result.getString("url")
-                                )
-                        );
-                    }
-                    notifyDataSetChanged();
-                } catch (JSONException e) {
-                    Log.e("MyApp", "Json error", e);
-                }
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e("MyApp", "Pokemon List error");
-            }
-        });
-
-        requestQueue.add(request);
-    }
-
-    @NonNull
-    @Override
-    public PokedexViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.pokedex_row, parent, false);
-        return new PokedexViewHolder(view);
-    }
-
-    @Override
-    public void onBindViewHolder(@NonNull PokedexViewHolder holder, int position) {
-        Pokemon current = pokemon.get(position);
-        holder.textView.setText(current.getName());
-        // View Holder will have access to its current Pokemon
-        holder.containerView.setTag(current);
-    }
-
-    @Override
-    public int getItemCount() {
-        return pokemon.size();
-    }
-
-
-
+    /* == View holders - End == */
 }
